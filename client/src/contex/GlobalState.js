@@ -1,9 +1,12 @@
 import React, { createContext, useReducer } from 'react';
+import axios from 'axios';
 import AppReducer from './AppReducer';
 
 // Initial state
 const initialState = {
-    transactions: []
+    transactions: [],
+    error: null,
+    loading: true
   }
 
   // Create context
@@ -14,23 +17,65 @@ const initialState = {
       const [state, dispath] = useReducer(AppReducer, initialState)
 
       // Actions
-      function deleteTransaction(id){
-          dispath({
-              type: 'DELETE_TRANSACTION',
-              payload: id
-          });
+
+      async function getTransactions(){
+          try {
+            const res = await axios.get('/api/v1/transactions');
+            dispath({
+                type: 'GET_TRANSACTIONS',
+                payload: res.data.data
+            });
+          } catch (err) {
+            dispath({
+                type: 'TRANSACTION_ERROR',
+                payload: err.response.data.error
+            });
+          }
       }
 
-      function addTransaction(transaction){
-        dispath({
-            type: 'ADD_TRANSACTION',
-            payload: transaction
-        });
+
+      async function deleteTransaction(id){
+          try {
+            await axios.delete(`/api/v1/transactions/${id}`);
+            dispath({
+                type: 'DELETE_TRANSACTION',
+                payload: id
+            });
+          } catch (err) {
+            dispath({
+                type: 'TRANSACTION_ERROR',
+                payload: err.response.data.error
+            });
+          }
+      }
+
+      async function addTransaction(transaction){
+          const config = {
+              headers: {
+                  'Content-Type': 'application/json'
+              }
+          }
+
+          try {
+              const res = await axios.post('/api/v1/transactions', transaction, config);
+              dispath({
+                  type: 'ADD_TRANSACTION',
+                  payload: res.data.data
+              });
+          } catch (err) {
+            dispath({
+                type: 'TRANSACTION_ERROR',
+                payload: err.response.data.error
+            });
+          }        
     }
 
       return (
           <GlobalContext.Provider value={{
               transactions: state.transactions,
+              error: state.error,
+              loading: state.loading,
+              getTransactions,
               deleteTransaction,
               addTransaction
           }}>
